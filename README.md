@@ -19,8 +19,9 @@ This repository contains a collection of graduate-level bioinformatics and phylo
        ✓ Visualized evolutionary transitions in eusociality with node-level probability representations across the phylogeny
 
 <p align="center">
-  <img width="405" height="315" alt="The Evolution Of Eusociality In Different Hymenopteran Species Using Ancestral State Reconstruction" src="https://github.com/user-attachments/assets/59e96238-6d06-4dac-8a02-497bf263dca8" />
+       <img width="405" height="315" alt="The Evolution Of Eusociality In Different Hymenopteran Species Using Ancestral State Reconstruction" src="https://github.com/user-attachments/assets/13962ffd-8e37-4881-8903-7efb3a922591" />
 </p>
+
 
 ## Concatenated & Coalescent Analyses | Multi-Gene Phylogenetic Inference and Comparative Tree Analysis in Rose Species
 
@@ -34,7 +35,7 @@ This repository contains a collection of graduate-level bioinformatics and phylo
        ✓ Imported, processed, and visualized MrBayes and ASTRAL trees in R, including node support formatting and branch length corrections
 
 <p align="center">
-<img width="630" height="315" alt="Concatenated---Coalescent-Analyses" src="https://github.com/user-attachments/assets/711eebc3-de5a-469e-88cd-c665c5e6dc34" />
+<img width="630" height="315" alt="Concatenated---Coalescent-Analyses" src="https://github.com/user-attachments/assets/5c0a50ef-bfa1-4fa1-93d7-2f7fcc82038b" />
 </p>
 
 ## Bayesian Phylogenetic Inference | Bayesian Phylogenetic Analysis and Trait Evolution in Cucurbita Species
@@ -50,7 +51,7 @@ This repository contains a collection of graduate-level bioinformatics and phylo
        ✓ Modeled continuous trait evolution of size using ancestral state reconstruction and visualized results with customized trait-mapped trees
 
 <p align="center">
-<img width="441" height="315" alt="Bayesian-Phylogenetic-Inference" src="https://github.com/user-attachments/assets/9d5918b5-7c05-4a35-9dba-6046efc8c9c3" />
+<img width="441" height="315" alt="Bayesian-Phylogenetic-Inference" src="https://github.com/user-attachments/assets/e18f9cee-6bb0-45c7-99f6-874940a33978" />
 </p>
 
 ## Divergence Times & Gene Flow | Temporal Modeling and Gene Flow Analysis in Jumping Spiders
@@ -68,7 +69,7 @@ This repository contains a collection of graduate-level bioinformatics and phylo
        ✓ Tested for directional gene flow using the ABBA–BABA (D-statistic) framework implemented in evobiR
 
 <p align="center">
-<img width="270" height="315" alt="Divergence-Times---Gene-Flow" src="https://github.com/user-attachments/assets/9a781269-d82c-47a0-a1e8-1f35ef5215a8" />
+<img width="270" height="315" alt="Divergence-Times---Gene-Flow" src="https://github.com/user-attachments/assets/62d4e6e3-1fa4-4452-9620-04a7c5038122" />
 </p>
 
 ## Maximum Likelihood & Combining Trees | Phylogenetic Integration and Comparative Tree Analysis of Reptiles
@@ -85,7 +86,7 @@ This repository contains a collection of graduate-level bioinformatics and phylo
        ✓ Combined partially overlapping taxon sets into a single supertree containing all species
 
 <p align="center">
-<img width="390.796875" height="315" alt="Maximum-Likelihood---Combining-Trees" src="https://github.com/user-attachments/assets/5f1f7213-218c-47d3-a95d-8f1ea2b4ce99" />
+<img width="390.796875" height="315" alt="Maximum-Likelihood---Combining-Trees" src="https://github.com/user-attachments/assets/6e876c9d-3604-40ff-ac89-29e47cedadf8" />
 </p>
 
 ## Comparative Phylogenetic Inference & Tree Concordance Analysis | Comparative Phylogenetic Modeling and Topological Concordance Analysis
@@ -107,7 +108,7 @@ This repository contains a collection of graduate-level bioinformatics and phylo
           of cross-species transmission
 
 <p align="center">
-<img width="468.05" height="315.1" alt="Comparative Phylogenetic Inference   Tree Concordance Analysis" src="https://github.com/user-attachments/assets/409cf44e-0e8d-4c3d-ab18-eec715b62d09" />
+<img width="468.05" height="315.1" alt="Comparative Phylogenetic Inference   Tree Concordance Analysis" src="https://github.com/user-attachments/assets/bf4ec20a-3da4-424d-a77f-ed3cf6ddb850" />
 </p>
 
 ## Genetic Distance & Substitution Models | Longitudinal Model Evaluation and Distance-Based Analysis of Influenza (H3N2)
@@ -127,7 +128,7 @@ This repository contains a collection of graduate-level bioinformatics and phylo
        ✓ Collapsed weakly supported nodes to generate a simplified, confidence-optimized phylogeny
 
 <p align="center">
-<img width="346.999" height="315.5" alt="Genetic Distance   Substitution Models" src="https://github.com/user-attachments/assets/53b79d4e-6031-4fa0-8136-a3f720a0bbde" />
+<img width="346.999" height="315.5" alt="Genetic Distance   Substitution Models" src="https://github.com/user-attachments/assets/905479da-6bd0-4d65-95f5-c0381c8d7f49" />
 </p>
 
 ***
