@@ -1,0 +1,323 @@
+---
+title: "Longitudinal Model Evaluation and Distance-Based Analysis of Influenza (H3N2)"
+author: "Samantha A. Taylor"
+date: "20 September 2021"
+output:
+      pdf_document :
+        latex_engine : xelatex
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+***
+
+# Install and Load Packages
+
+We'll be using four different packages for the exercise today: msa to align sequences with Clustal-O, phangorn to perform distance calculations, phytools to perform bootstrapping, and adegenet to plot our resulting phylogenies with colors. 
+
+```{r echo=TRUE, include=FALSE}
+
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#install.packages("BiocManager")
+
+#BiocManager::install("msa")
+#BiocManager::install("phangorn")
+#BiocManager::install("phytools")
+#BiocManager::install("adegenet")
+
+```
+
+```{r echo=TRUE, include=FALSE}
+
+library(msa)
+library(phangorn)
+library(phytools)
+library(adegenet)
+
+```
+
+If the adegenet installation is problematic, try installing without re-compiling from source code. If it continues to be a problem, then do not worry too much about it; you can still make your plots and complete the assignment without this package-you just will not get the nice colors. I'll provide alternative plotting instructions where relevant.
+
+***
+
+# Download the Fasta sequences
+
+For this exercise, you will be using a dataset that consists of 48 DNA sequences from the seasonal influenza virus (H3N2). These 48 samples were collected over 16 years (from 1993 - 2008), with 3 samples from each year. The samples are labeled by the year they were collected.
+
+Click here  Download here to download the .fasta file for these sequences.
+
+***
+
+# Align the sequences with Clustal-O using the MSA package
+
+Once you have downloaded the sequences, you need to align them with Clustal-O, like we did in the first week of class.
+
+Except this time, instead of going through the web, we'll use the msa package from R:
+
+```{r}
+
+dnaSeqs = readDNAStringSet("flu_seqs.fasta",format="fasta")
+aligns = msa(dnaSeqs, method="ClustalOmega")
+
+```
+
+***
+
+# Use the Phangorn package to compare substitution models
+
+Next, we'll use the phangorn package to test for the best nucleotide substitution model.
+
+The first thing we have to do is convert the msa output to a phyDat object that phangorn can work with:
+
+```{r}
+
+forPhang = msaConvert(aligns, type="phangorn::phyDat")
+
+```
+
+Next, we use the modelTest function to compare how well the different substitution models fit our data. Write the results of modelTest to a text file, and save this file somewhere that you can access it again later.
+
+```{r}
+
+mt = modelTest(forPhang)
+write.table(mt, "ModelTestResults.txt", quote=FALSE, sep="\t",row.names=FALSE, col.names=TRUE)
+
+```
+
+***
+
+# Questions for Part I:
+
+### 1. Which model had the HIGHEST log likelihood value? Briefly describe this model, its assumptions in terms of base frequencies and equal or unequal substitution rates, and any other parameters it may include. (5 pts)
+
+```{r}
+
+max(mt$logLik)
+mt[24, ]
+
+```
+
+* The highest log likelihood value is -4675.717, which corresponds to model GTR+G+I. GTR models are generalised time-reversible models, and have unequal base frequencies and six substitution rates.
+Our model has:
+  + 103 degrees of freedom
+  + A log likelihood value (measure of goodness of fit) of -4675.717.
+This is the highest log likelihood value, implying it is the best model if based on logLik alone. 
+  + AIC (estimator of prediction error) of 9557.435.
+This is the second lowest AIC value, meaning it is the second most parsimonious model in the data set.
+  + BIC (model scoring method).
+This is the fourth lowest BIC value, meaning it is not the strongest, but far from the weakest, model.  
+
+### 2. The Bayesian Information Criterion (BIC) is a method for comparing models that includes penalties for more complex models. With this method, the best one is the model with the LOWEST BIC score. In your test, which model is this? Is it different from the model with the highest likelihood? Describe this model in terms of its assumptions. (5 pts)
+
+```{r}
+
+min(mt$BIC)
+mt[23, ]
+
+```
+
+* The highest log likelihood value is 10110.66, which corresponds to model GTR+G.This model has:
+  + 102 degrees of freedom
+  + A log likelihood value (measure of goodness of fit) of -4675.945.
+This is the second highest log likelihood value, implying it is the second best model if based on logLik alone. 
+  + AIC (estimator of prediction error) of 9555.889.
+This is the lowest AIC value, meaning it is the most parsimonious model in the data set.
+  + BIC (model scoring method).
+This is the lowest BIC value, meaning it is the strongest model. 
+
+***
+
+# Calculate Genetic Distance Under the Best Model
+
+For this next step, we want to convert our phyDat object, which is the variable named forPhang to a DNAbin object:
+
+```{r}
+
+dna = as.DNAbin(forPhang)
+
+```
+
+Now, calculate the genetic distance using the dist.dna function. This function allows you to specify the nucleotide substitution model you think best fits your data. Ideally, we want to use the model that scored the best in terms of BIC score in the modelTest from Part I. To see all of the model options for dna.dist, go to the help page:
+
+```{r, eval=FALSE}
+
+?dist.dna()
+
+```
+
+As you read through the model options, you will notice that your best scoring model is not listed, although there are several models that seem like they have similar assumptions. I recommend using the TN93 model, with the gamma parameter set to TRUE. Read the description of this model in the dist.dna() help page to see why I made this selection.
+
+```{r}
+
+D = dist.dna(dna, model="TN93", gamma=TRUE)
+
+```
+
+***
+
+# Create both UPGMA and Neighbor-Joining Trees
+
+To create the two types of trees, the commands are very straightforward:
+
+```{r}
+
+t.upgma = upgma(D)
+t.nj = nj(D)
+
+```
+
+After creating the trees, you can also manually define an outgroup, to make "rooted" trees. Here is how I do that with the UPGMA tree:
+
+```{r}
+
+t.upgma.root = root(phy=t.upgma, outgroup='1993a')
+
+```
+
+Use the same function to get a rooted Neighbor-Joining tree.
+
+```{r}
+
+t.nj.root = root(phy=t.nj, outgroup='1993a')
+
+```
+
+***
+
+# Plot the Rooted Trees to Compare each Method
+
+You can use a simple plot function to plot each tree individually, and then save each plot as a pdf manually. Note that this is NOT the plot command which will require adegenet, so if you could not get that package installed your plot will still work.
+
+```{r, fig.width=15, fig.height=15}
+
+UPGMA_TREE = plot(t.upgma.root, main="UPGMA Plot")
+NJ_TREE = plot(t.nj.root, main="Neighbor-Joining Plot")
+
+```
+
+Note that the main option lets us define a plot title. You will also see that I am using the option cex=0.75, which shrinks the tip label font size, making them more readable with the number of sequences we have. Feel free to adjust this parameter to your liking.
+
+***
+
+# Questions for Part II:
+
+### 3. Describe any differences in clades that you observe between the UPGMA and NJ trees (be sure to include a plot of each tree in your answer!). In particular, are viruses from the same year always in the same clade in each tree? Do viruses collected in later years branch off from the viruses of previous years (like we would expect)? 5 pts
+
+* One of the most obvious difference between the trees is the grouping of clades. The UPGMA tree has a very severe grouping of 1997-2002 and another severe grouping of 2003-2008. The neighbor-joining tree is more sporadic. 2001-2002 is closely knit, 2003 is alone, and then 2004-2005 then 2007-2008 for the most part are closely knit groups.
+* Viruses from the same year are not always in the same clade in each tree - for example, 1993c is more closely related to 1994b/c/a than 1992b/a.
+* Outside of the pattern noted above, for the most part, viruses collected in later years branch off from the viruses of previous years. On the left of the trees is the earliest year, 1993, and the furthest on the right of the tree is the most recent year, 2008.
+
+***
+
+# Get a Parsimony Score for each Tree
+
+To figure out which of our trees might be a better representation of influenza evolution, we can calculate a parsimony score for each of our trees. To do this, you can use the parsimony() function:
+
+```{r}
+
+parsimony(t.upgma.root, forPhang)
+parsimony(t.nj.root, forPhang)
+
+```
+
+***
+
+# Questions for Part III:
+
+### 4. What are your parsimony scores for your UPGMA and Neighbor-Joining trees? Given that a lower score is better, which of your trees is the most parsimonious? 2 pts
+
+* The parsimony score for the UPGMA tree is 380, while the NJ tree has a parsimony score of 340. because 340 < 380, the Neighbor-Joining tree is the most parsimonious.
+
+### 5. Based on what you know about the definition of parsimony, what does it mean when we say that one tree is more parsimonious than another? i.e. How should we interpret this result? 3 pts
+
+* When one tree is more parsimonious than another, it means that one tree has a smaller sum of the smallest number of substitutions needed for each site. Basically, the most parsimonious tree requires the fewest nucleotide substitutions to explain the data.
+
+***
+
+# Perform Bootstrapping on the Most Parsimonious Tree
+
+To see how much confidence we should have in the clades shown in our most parsimonious tree, let's perform 100 bootstrapping replicates of the same tree construction method. The function for this is boot.phylo().
+
+This command will look different depending on which of your trees is the most parsimonious. If it is the UPGMA tree you want to test, you'll have a command that looks like this:
+
+```{r}
+
+myBoots = boot.phylo(t.upgma.root, dna, function(x) root(upgma(dist.dna(x, model="TN93", gamma=TRUE)),1))
+
+```
+
+If your most parsimonious tree is the neighbor-joining tree, then your command will look like this:
+
+```{r}
+
+myBoots = boot.phylo(t.nj.root, dna, function(x) root(nj(dist.dna(x, model="TN93", gamma=TRUE)),1))
+
+```
+
+Once you get your bootstrap values, you can plot them on the tree with the functions below:
+
+```{r, fig.width=15, fig.height=15}
+
+plot(t.nj, cex=1, edge.width=2, main="Some Title for Your Tree")
+nodelabels(myBoots, cex=1)
+
+```
+
+***
+
+# Questions for Part IV:
+
+### 6. Are there any nodes in your tree that seem to have very weak bootstrap support (i.e. less than 50%)? How many of these weakly supported nodes do you see? Which node has the weakest support, and what clade is this node at the base of? If it is hard to see exactly where the nodes are with the bootstrap labels on them, you might also want to refer back to your original plot without the labels to help you. 5 pts
+
+* I see 9 total weakly supported nodes. The node with the weakest support has a value of 26, with clades 1993b and 1993a on its base. 
+
+***
+
+# Remove Uncertain Nodes and Optimize the Tree for Parsimony
+
+To make a tree where we're only showing nodes that are more well-supported, we can find the nodes with <50% bootstrap support and collapse them. Even though this removes some information from our tree, it leaves us with a tree where we are more confident in all of the shown results.
+
+```{r}
+
+N <- length(t.nj$tip.label)
+toCollapse <- match(which(myBoots<50)+N, t.nj$edge[,2])
+t.nj$edge.length[toCollapse] = 0
+new.tree = di2multi(t.nj, tol=0.00001)
+
+```
+
+Now, let's make sure our reconstructed tree is the most parsimonious tree possible, with the function optim.parsimony():
+
+```{r}
+
+tre.pars = optim.parsimony(new.tree, forPhang)
+
+```
+
+Finally, let's plot our most parsimonious tree. For this plot, we're going to 1) plot an unrooted tree, since this version actually seems to make the trends more clear, and 2) add colored labels to our plots to make it easier to see where different years group together.
+
+```{r, fig.width=15, fig.height=15}
+
+plot(tre.pars, type="unr", show.tip=FALSE, edge.width=2)
+title("Maximum-parsimony tree")
+year = as.numeric(gsub("[a-c]", "", names(forPhang)))
+myPal <- colorRampPalette(c("red","yellow","green","blue"))
+tiplabels(tre.pars$tip.label, bg=transp(num2col(year, col.pal=myPal),.7), cex=1, fg="transparent")
+temp <- pretty(1993:2008, 16)
+legend("bottomleft", fill=transp(num2col(temp, col.pal=myPal),.7),leg=temp, ncol=2)
+
+```
+
+***
+
+# Questions for Part V:
+
+### 7. Show the plot for your final tree. Even though there are still some uncertain relationships, can you now see any kind of trend with respect to the years the viruses were sampled and where they appear on the tree? Describe your new tree and the trends that you see. 5 pts
+
+* I definitely see a trend of red on the far left (earliest years) to the blue on the far right (latest years). While this is similar to the trend I saw earlier, it is more evident now. In the middle are the green, where the years in the middle lie.
+
+***
