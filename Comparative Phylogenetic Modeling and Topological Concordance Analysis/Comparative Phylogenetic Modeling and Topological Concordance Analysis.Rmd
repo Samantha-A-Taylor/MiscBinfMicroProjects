@@ -1,0 +1,308 @@
+---
+title: 'Comparative Phylogenetic Modeling and Topological Concordance Analysis'
+author: "Samantha A. Taylor"
+date: "14 October 2021"
+output:
+      pdf_document :
+        latex_engine : xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+***
+# Part 1: Neighbor-Joining Tree (15 pts)
+***
+Please download the midterm19.fasta file.  This file contains a total of 19 different DNA sequences that are each ~250 base pairs long.
+
+Using all of the sequences in this file, calculate the genetic distance using the nucleotide substitution model you believe is the most appropriate (i.e. the best fit for the data), and construct a rooted, Neighbor-Joining tree, with 100 bootstrap replicates.  Set the sequence named "Root" as the out-group when rooting the tree.  
+
+Note: I recommend using R to perform the alignment, rather than the web-based EMBL toolkit, in order to make it easier to get files into the right format for some of the later questions.
+
+```{r include=FALSE}
+
+library(msa)
+library(phangorn)
+library(phytools)
+library(adegenet)
+
+```
+
+### Question 1:
+1A.  Which multiple sequence alignment method did you use?  Briefly describe what kind of alignment method this is (i.e. the names of the underlying algorithm(s)) and how it works.  You do NOT need to go into any more detail than what we have discussed in class. You also do NOT need to test multiple methods or justify your selected method, you only need to describe it.
+
+```{r}
+
+dnaSeqs = readDNAStringSet("midterm19.fasta",format="fasta")
+aligns = msa(dnaSeqs, method="ClustalOmega")
+
+```
+
+```{r}
+
+forPhang = msaConvert(aligns, type="phangorn::phyDat")
+
+mt = modelTest(forPhang)
+
+```
+
+### Question 2:
+1B.  Describe the nucleotide substitution model that you used to calculate the genetic distance, and explain why and how you chose this model.  Be sure to clearly state what the base frequency and substitution rate assumptions are in your chosen model, and discuss any other parameters that may be part of the model.  
+
+If your preferred model was not available in the R function and you had to select an alternative, make sure to describe any differences between the model you ended up using and the one you would have preferred.
+
+```{r}
+
+mt[which(mt$logLik==max(mt$logLik)),]
+
+mt[which(mt$BIC==min(mt$BIC)),]
+
+dna = as.DNAbin(forPhang)
+D = dist.dna(dna, model="TN93", gamma=TRUE)
+
+```
+
+```{r}
+
+t.upgma = upgma(D)
+t.nj = nj(D)
+
+t.upgma.root = root(phy=t.upgma, outgroup='Root')
+t.nj.root = root(phy=t.nj, outgroup='Root')
+
+```
+
+```{r}
+
+UPGMA_TREE = plot(t.upgma.root, main="UPGMA Plot")
+NJ_TREE = plot(t.nj.root, main="Neighbor-Joining Plot")
+
+```
+
+### Question 5: 1E
+
+```{r}
+
+parsimony(t.upgma.root, forPhang)
+parsimony(t.nj.root, forPhang)
+
+```
+
+```{r}
+
+#myBoots = boot.phylo(t.upgma.root, dna, function(x) root(upgma(dist.dna(x, model="TN93", gamma=TRUE)),1))
+#plot(t.upgma, cex=1, edge.width=2, main="Most Parsimonious Tree: Rooted UPGMA Tree with Bootstrap Support")
+#nodelabels(myBoots, cex=1, bg='lightpink')
+
+myBoots = boot.phylo(t.nj.root, dna, function(x) root(nj(dist.dna(x, model="TN93", gamma=TRUE)),1))
+
+```
+
+### Question 3:
+1C.  Please upload a pdf of your resulting rooted, neighbor-joining  tree plot with bootstrap support values.   Please make sure that both the tip labels and bootstrap node labels of your tree are clearly readable in your figure!
+
+```{r}
+
+pdf(file = "Question3.pdf", width = 15, height = 10)
+plot(t.nj.root, cex=1, edge.width=2, main="Most Parsimonious Tree: Rooted Neighbor-Joining Tree with Bootstrap Support Values")
+nodelabels(myBoots, cex=1, bg='lightyellow')
+dev.off()
+
+```
+
+***
+# Part 3: Maximum Likelihood Trees (15 pts)
+***
+
+Separate the sequences corresponding to Sub-unit 1 (plus the Root sequence) into their own phyDat object, redo the alignment, and then use the Sub-unit 1 alignment to construct a rooted maximum likelihood tree with 1000 bootstrap support replicates in RAxML.  Then plot your bestTree result with bootstrap support values at each node.
+
+Then, repeat this process for the Sub-unit 2 sequences (again make sure to include the Root with these sequences) to get a second RAxML tree.
+
+```{r}
+
+library(phangorn)
+library(msa)
+options(stringsAsFactors=FALSE)
+
+su1 = readDNAStringSet("subunit1-midterm.fasta", format="fasta")
+su1.align = msa(su1, method="ClustalOmega")
+write.phylip(su1.align, "subunit1.phy")
+
+su2 = readDNAStringSet("subunit2-midterm.fasta", format="fasta")
+su2.align = msa(su2, method="ClustalOmega")
+write.phylip(su2.align, "subunit2.phy")
+
+```
+
+## Run RAxML with 1000 Bootstrap Replicates
+
+```{bash include=TRUE, eval=FALSE}
+
+#!/bin/bash
+#SBATCH --time=0:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=8GB
+#SBATCH --partition=Centaurus
+
+module load raxml
+
+raxmlHPC -s subunit1.phy \
+    -n Sub1Boot \
+    -f a \
+    -m GTRGAMMA \
+    -N 1000 \
+    -o Root \
+    -p 1234 -x 1234 \
+    >Sub1_raxml_log.txt
+
+#!/bin/bash
+#SBATCH --time=0:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=8GB
+#SBATCH --partition=Centaurus
+
+module load raxml
+
+raxmlHPC -s subunit2.phy \
+    -n Sub2Boot \
+    -f a \
+    -m GTRGAMMA \
+    -N 1000 \
+    -o Root \
+    -p 1234 -x 1234 \
+    >Sub2_raxml_log.txt
+
+```
+
+## Plot your RAxML Tree with Bootstrap Values
+
+### Question 11:
+3A. Upload a pdf file with your resulting maximum likelihood tree for Sub-unit 1.  Be sure that your bootstrap values are superimposed onto the RAxML best tree, and that all labels are readable.
+
+```{r}
+
+mySub1.tree = read.tree("RAxML_bestTree.Sub1Boot")
+mySub1.boot = read.tree("RAxML_bootstrap.Sub1Boot")
+
+pdf(file = "Question11.pdf", width = 10, height = 7)
+x1 = plotBS(tree=mySub1.tree, BStrees=mySub1.boot, cex=1, type="phylogram", 
+            p=0, bs.col="white", main = "Sub-unit 1 Maximum Likelihood Tree" )
+nodelabels(x1$node.label, cex=1, col="black", bg = "lightpink")
+dev.off()
+
+```
+
+### Question 12:
+3B.  Upload a pdf file with your resulting maximum likelihood tree for Sub-unit 2.  Be sure that bootstrap values are superimposed on the RAxML best tree, and that all labels are readable.
+
+```{r}
+
+mySub2.tree = read.tree("RAxML_bestTree.Sub2Boot")
+mySub2.boot = read.tree("RAxML_bootstrap.Sub2Boot")
+
+pdf(file = "Question12.pdf", width = 10, height = 7)
+x2 = plotBS(tree=mySub2.tree, BStrees=mySub2.boot, cex=1, type="phylogram", 
+            p=0, bs.col="white", main = "Sub-unit 2 Maximum Likelihood Tree")
+nodelabels(x2$node.label, cex=1, col="black", bg = "lightgreen")
+dev.off()
+
+```
+
+## Perform a Quantitative Comparison of the Two Trees
+
+### Question 13: 
+3C.  Perform a quantitative comparison of your Sub-unit 1 and Sub-unit2 trees by calculating the symmetric difference, branch score difference, and path difference.  Report your 3 values, indicate which metric shows the largest difference, and briefly describe how this metric is calculated.
+
+```{r}
+
+mySub1.tree$tip.label = gsub("1", "", mySub1.tree$tip.label)
+mySub2.tree$tip.label = gsub("2", "", mySub2.tree$tip.label)
+
+treedist(mySub1.tree, mySub2.tree)
+
+```
+
+## Get the Maximum Agreement Subtree
+
+### Question 14:
+3D. Get the Maximum Agreement Subtree for your sub-unit 1 and sub-unit 2 trees.  Upload a pdf file with your resulting tree.  (Note that this tree will NOT have bootstrap support values).  Be sure that all tip labels are readable.
+
+```{r}
+
+pdf(file = "Question14.pdf")
+agree.tree = mast(mySub1.tree, mySub2.tree, tree=TRUE)
+plot(agree.tree, main = "Maximum Agreement Subtree For Sub-units 1 & 2")
+dev.off()
+
+```
+
+***
+# Part 4: Host Range Shifts (15 pts)
+***
+
+Many viruses have been known to undergo "host range shifts," which happens when a strain adapts to be able to infect and spread within a new host species (a classic example would be the shift from primates to humans in the evolution of HIV).
+
+Birds in particular seem to be frequent reservoirs of viruses that can evolve to infect mammalian species, including humans.
+
+Below, I've provided a table indicating which host species each of the 9 virus strains and their out-group can infect.   I've also included a figure from a paper demonstrating typical interspecies transmission patterns for a virus such as H1N1.  Assuming our viruses behave like H1N1, this means strains are more likely to move from Birds to Pigs than they are from Birds to Humans; once they are in Pigs they are more or less equally likely to move into either birds or humans; and when they are in Humans they are more likely to move into Pigs than they are into Birds.
+
+```{r}
+
+library(phangorn)
+library(phytools)
+library(castor)
+
+```
+
+
+```{r}
+
+options(stringsAsFactors=FALSE)
+
+sub2tree = read.tree("RAxML_bestTree.Sub2Boot")
+sub2tree$tip.label = gsub("2", "", sub2tree$tip.label)
+
+#plot(sub2tree, main="Starting RAxML Tree (Sub-unit 2)")
+
+my.states = c('Bird', 'Bird', 'Human', 'Pig', 'Pig', 'Human', 'Human', 'Pig', 'Bird', 'Bird')
+
+names(my.states) = sub2tree$tip.label
+numeric.states = as.numeric(as.factor(my.states))
+
+sub2tree$tip.label
+sub2tree$Nnode
+
+```
+
+
+```{r}
+
+mp_pro = asr_max_parsimony(tree=sub2tree, tip_states=numeric.states, Nstates=3, transition_costs="proportional")
+mp_pro
+
+```
+
+
+```{r}
+
+pie.matrix = matrix(mp_pro$ancestral_likelihoods, ncol=3)
+rownames(pie.matrix) = seq(11,19)
+colnames(pie.matrix) = c("Bird", "Human", "Pig")
+
+```
+
+```{r}
+
+pdf(file = "Question16.pdf", width = 15, height = 10)
+
+plotTree(sub2tree, offset=1, main = "")
+tiplabels(pie = to.matrix(my.states, sort(unique(my.states))), piecol = c("lightpink", "lightgreen", "lightyellow"), cex = 0.3)
+nodelabels(node = as.numeric(rownames(pie.matrix)), pie = pie.matrix, piecol = c("lightpink", "lightgreen", "lightyellow"), cex=0.7)
+#add.simmap.legend(leg=c("Bird", "Human", "Pig"), colors=c("lightpink", "lightgreen", "lightyellow"))
+
+dev.off()
+
+```
