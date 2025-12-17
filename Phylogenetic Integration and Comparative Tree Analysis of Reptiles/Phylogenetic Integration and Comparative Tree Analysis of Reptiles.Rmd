@@ -1,0 +1,368 @@
+---
+title: 'Phylogenetic Integration and Comparative Tree Analysis of Reptiles'
+author: "Samantha A. Taylor"
+date: "04 October 2021"
+output:
+      pdf_document :
+        latex_engine : xelatex
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+***
+
+# How many times did limblessness evolve?
+
+Ancestral snakes used to have legs, but after they diverged from lizards they evolved into the limbless forms we see today.
+
+However, there are still some reptile species that look like a strange mix between lizards and snakes: these "legless lizards" have lizard-like heads but snake-like bodies. For this exercise, you will use maximum likelihood and consensus tree methods to look at the phylogenetic relationships among several species of snakes, lizards, and these legless lizard intermediates to determine whether or not the evolution of limblessness has happened more than once.
+
+## The Data Set
+
+The dataset for the first part this exercise consists of 2 sets of sequences corresponding to 2 different genes: SLC8A1 and R35. Use the links associated with each gene name to download the fasta files. Each file contains DNA sequences from 7 different reptile species, including:
+    * 3 known lizard species: Tree dragon lizard,  Agama lizard, and Chamaeleon
+    * 3 known snake species: Copperhead, Python, and Boa constrictor
+    * 1 distantly related reptile (to use as an outgroup): Tuatara
+
+For the second part of the exercise, you will also get sequences from 4 "mystery" legless lizard species: Worm lizard, Glass lizard, Galliwasp, and California legless lizard
+
+***
+
+# Part I: Compare the Maximum Likelihood Trees for 2 Genes
+
+## Align and Format the Input Data
+
+Download the SLC8A1 and R35 datasets from canvas.
+
+Align the sequences using Clustal-Omega, and get the output into Phylip format.  You can do this by either using the EMBL web interface we used in earlier exercises, or by using the msa package in R like we did in the Genetic Distance & Substitution Exercise. If you use R (which I personally think is easier), then use the write.phylip command after you have done the alignment in order to get your output in the proper format:
+
+```{r include=FALSE}
+
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#install.packages("BiocManager")
+
+#BiocManager::install("msa", quietly = TRUE)
+library(msa)
+#BiocManager::install("phangorn", quietly = TRUE)
+library(phangorn)
+
+#BiocManager::install("phytools", quietly = TRUE)
+library(phytools)
+
+```
+
+```{r}
+
+R35dnaSeqs = readDNAStringSet("R35-reptiles.fasta",format="fasta")
+R35aligns = msa(R35dnaSeqs, method="ClustalOmega")
+
+write.phylip(R35aligns, "R35-reptiles.phy")
+
+SLC8A1dnaSeqs = readDNAStringSet("SLC8A1-reptiles.fa",format="fasta")
+SLC8A1aligns = msa(SLC8A1dnaSeqs, method="ClustalOmega")
+
+write.phylip(SLC8A1aligns, "SLC8A1-reptiles.phy")
+
+```
+
+## Run RAxML with 1000 Bootstrap Replicates
+
+Upload your phylip file to the Centaurus cluster and run RAxML using the same GTRGAMMA model, 1000 bootstrap replicates, and other parameters as we used in the practice exercise.  Set the 'Tuatara' as the outgroup.
+
+```{bash include=TRUE, eval=FALSE}
+
+#!/bin/bash
+#SBATCH --time=0:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=8GB
+#SBATCH --partition=Centaurus
+
+module load raxml
+
+raxmlHPC -s R35-reptiles.phy \
+    -n R35Boot \
+    -f a \
+    -m GTRGAMMA \
+    -N 1000 \
+    -o Tuatara \
+    -p 1234 -x 1234 \
+    >R35_raxml_log.txt
+
+#!/bin/bash
+#SBATCH --time=0:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=8GB
+#SBATCH --partition=Centaurus
+
+module load raxml
+
+raxmlHPC -s SLC8A1-reptiles.phy \
+    -n SLC8A1Boot \
+    -f a \
+    -m GTRGAMMA \
+    -N 1000 \
+    -o Tuatara \
+    -p 1234 -x 1234 \
+    >SLC8A1_raxml_log.txt
+
+```
+
+## Plot your RAxML Tree with Bootstrap Values
+
+Once RAxML has finished running, download your best tree and your bootstrap trees for each gene.  In R, plot the best tree with bootstrap values on each node for both genes. 
+
+```{r}
+
+myR35.tree = read.tree("./RAxML_bestTree.R35Boot")
+myR35.boot = read.tree("./RAxML_bootstrap.R35Boot")
+x1 = plotBS(tree=myR35.tree, BStrees=myR35.boot, cex=1, type="phylogram", 
+            p=0, bs.col="white", main = "R35 Best Tree" )
+nodelabels(x1$node.label, cex=1, col="black", bg = "lightpink")
+
+mySLC8A1.tree = read.tree("./RAxML_bestTree.SLC8A1Boot")
+mySLC8A1.boot = read.tree("./RAxML_bootstrap.SLC8A1Boot")
+x2 = plotBS(tree=mySLC8A1.tree, BStrees=mySLC8A1.boot, cex=1, type="phylogram", 
+            p=0, bs.col="white", main = "SLC8A1 Best Tree")
+nodelabels(x2$node.label, cex=1, col="black", bg = "lightgreen")
+
+```
+
+### Question 1: 
+Provide the plots for each of your RAxML best trees with node support values.  Be sure to clearly label which tree corresponds to each gene.  Describe any differences in the clades that you observe between the 2 trees: do the lizards and snakes form distinct, separate clades in each tree?  Do you see any polytomies in either tree?  In each tree, which node has the lowest bootstrap support? (10 pts)
+
+Answer:
+Lizards (Tree dragon lizard,  Agama lizard, and Chamaeleon) and snakes (Copperhead, Python, and Boa constrictor) form, distinct, separate clades in the R35 best tree, however, the SLC8A1 best tree is odd. The SLC8A1 tree shows the snakes (Copperhead, Python, and Boa constrictor) having close relation, but for the lizards, the Agama lizard and Chamaeleon are shown together at the very bottom of the tree, while the Tree dragon lizard is alone near the top of the tree. The Tuatara is still very much the outgroup, being very distinctly separate. I do not see any polytomies on either tree, just internal nodes with two immediate descendants. The node on the R35 tree that has the lowest bootstrap support has a score of 42.9. This node includes the python and the copperhead. The node on the SLC8A1 tree that has the lowest bootstrap support has a score of 26.6.
+
+## Perform a Quantitative Comparison of the Two Trees
+
+Calculating the different dissimilarity scores that we have discussed is very easy in the phangorn package, since a single function, treedist(), will calculate all of them for you.  To compare the 2 trees, simply type:
+
+```{r}
+
+treedist(x1, x2)
+
+```
+
+### Question 2: 
+What is the symmetric difference, branch score difference, and path difference between your two trees?  Which number implies the biggest difference in the trees?  Based on what you know about the definition of these metrics, why would one score be much higher than the others?  Does your highest score make sense given what you see when you plot the two trees? (3 pts)
+
+Answer:
+The symmetric difference between the two trees is 4.0.
+The branch score difference between the two trees is 20.725578.
+The path difference between the two trees is 5.830952.
+The quadratic path difference implies the biggest difference in the trees.
+The quadratic path difference score can be much higher than the others because it includes all branch lengths, and not just the differences in number of branch lengths.
+The quadratic path difference being the highest score makes sense given what I see when I plot the two trees because it uses the branch lengths instead of just the number of branches between taxa.
+
+***
+
+# Part II: Add the Limbless Lizards to the Tree
+
+For the second part of the exercise, you will need to download an additional dataset that contains the R35 gene sequence for the legless lizard species that we want to place onto our reptile phylogeny. Note that this file will also contain sequences from the same outgroup (the Tuatara), and the other 4 lizard species, but it does not contain the snake sequences.
+
+## Run RAxML with 1000 Bootstrap Replicates
+
+Align your new sequences, upload them to the cluster, and run RAxML with 1000 bootstrap replicates.  Then download your resulting best tree and bootstrap files.  Plot your best tree with bootstrap support values on each node.
+
+```{r}
+
+R35GSdnaSeqs = readDNAStringSet("R35GS-Lizards.fasta",format="fasta")
+R35GSaligns = msa(R35GSdnaSeqs, method="ClustalOmega")
+
+write.phylip(R35GSaligns, "R35GS-Lizards.phy")
+
+```
+
+```{bash include=TRUE, eval=FALSE}
+
+#!/bin/bash
+#SBATCH --time=0:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=8GB
+#SBATCH --partition=Centaurus
+
+module load raxml
+
+raxmlHPC -s R35GS-Lizards.phy \
+    -n R35GSBoot \
+    -f a \
+    -m GTRGAMMA \
+    -N 1000 \
+    -o Tuatara \
+    -p 1234 -x 1234 \
+    >R35GS_raxml_log.txt
+
+```
+
+```{r}
+
+myR35GS.tree = read.tree("RAxML_bestTree.R35GSBoot")
+myR35GS.boot = read.tree("RAxML_bootstrap.R35GSBoot")
+
+```
+
+### Question 3: 
+Provide a plot of you best tree with bootstrap support values. Describe where the legless lizards appear on the tree in relation to the regular, 4-legged lizard species. (5 pts)
+
+```{r}
+
+x3 = plotBS(tree=myR35GS.tree, BStrees=myR35GS.boot, cex=1, type="phylogram", 
+            p=0, bs.col="white", main = "R35 + Limbless Lizards Best Tree")
+nodelabels(x3$node.label, cex=1, col="black", bg = "lightyellow")
+
+```
+
+Answer:
+On the tree, 3 of the the legless lizards, California Legless Lizard, Galliwasp, and Glass Lizard (but NOT Worm Lizard), are in their own distinct section of the tree, with the glass lizard and California Legless Lizard being the most closely related, and the galliwasp being the next most related to them. However, the Worm lizard shows to be more closely related to the clade of the lizards with limbs, then to the clade of limbless lizards. 
+
+## Plot Different Consensus Trees for R35
+
+Get the strict consensus tree for the R35 results you just plotted by using the consensus() function with default parameters:
+
+```{r}
+
+strict = consensus(myR35GS.boot)
+
+```
+
+### Question 4: 
+Provide the plot of your strict consensus tree.  Do you retain any phylogenetic information in this tree, or did all of the nodes turn into polytomies? (2 pts)
+
+Answer:
+All  nodes turned to polytomies: one contains the wormtail, galliwasp, glass lizard, california legless lizard, then the chamaeleon/dragon lizard/ agama lizard clade (which is a polytomy in itself).
+
+```{r}
+
+plotBS(strict, BStrees=myR35GS.boot, type="phylogram")
+
+```
+
+Get the majority-rule consensus trees for the same set of R35 results by using the same consensus() function, but this time set p = 0.5 (whereas the default value was p=1). 
+
+```{r}
+
+mj1 = consensus(myR35GS.boot, p=0.5)
+
+```
+
+### Question 5: 
+Provide the plot of your majority rule consensus tree.  Do you get back all of the phylogenetic information you lost in the strict consensus tree, or are there still polytomies? (2 pts)
+
+Answer:
+I got back all of the phylogenetic information lost in the strict consensus tree, and there are no more polytomies!
+
+```{r}
+
+plotBS(mj1, BStrees = myR35GS.boot, type="phylogram")
+
+```
+
+Get the maximum clade credibility tree by using the mcc() function:
+
+```{r}
+
+mcc1 = mcc(myR35GS.boot)
+
+```
+
+### Question 6: 
+Provide the plot of your maximum clade credibility tree.  (1 pt)
+
+Answer:
+
+```{r}
+
+plotBS(tree=mcc1, BStrees=myR35GS.boot, type="phylogram")
+
+```
+
+Calculate average (or median) trees for your set of R35 bootstrap replicates.  You will need to load the phytools package for this.
+
+The function that we will use is called averageTree(), which takes as its arguments a set of trees, and a name for the method of calculating distance that you want to use. We will use the "symmetric distance," which is equivalent to the Robinson-Foulds distance.
+
+```{r, eval=FALSE}
+
+avg1 = averageTree(trees=myR35GS.boot, method="symmetric.difference")
+
+```
+
+```{r include=FALSE}
+
+avg1 = averageTree(trees=myR35GS.boot, method="symmetric.difference")
+
+```
+
+### Question 7: 
+Provide the plot of your average tree. Do any of the clades or relationships change when compared to your maximum clade credibility tree?(2 pts)
+
+Answer:
+The outgroup location changed: The Tuatara is now being shown as having a common ancestor with the common ancestor of the galiwasp and glass/california lizards clade.
+
+```{r}
+
+plotBS(avg1, BStrees=myR35GS.boot, type="phylogram")
+
+```
+
+## Get Combined Trees for R35: Get the Maximum Agreement Subtree
+
+In phangorn, the function to use is mast(). Note that this will compare 2 trees at a time to get the agreement subtree. For our example, we will compare the 2 different best trees that we have for the R35 gene:
+
+```{r}
+
+agree.tree = mast(myR35.tree, myR35GS.tree, tree=TRUE)
+
+```
+
+### Question 8: 
+Provide the plot of your agreement subtree. Which taxa are included in this tree?(2 pts)
+
+Answer:
+The taxa includes just the legged lizards.
+
+```{r}
+
+plot(agree.tree)
+
+```
+
+## Get the SuperTree with ALL of the Taxa together
+
+To combine our 2 different subsets of the 11 taxa into one tree with all of the taxa, we first need to create a new object of the class "multiPhylo" that contains the trees we want to combine:
+
+
+```{r}
+
+temp = c(myR35.tree, myR35GS.tree)
+class(temp)
+
+```
+
+Now, you can use the superTree function as shown below:
+
+```{r}
+
+stree = superTree(temp, rooted=TRUE)
+
+```
+
+### Question 9: 
+Provide the plot of your combined super tree. Looking at where your legless lizards end up on this tree, how many times do you think "leglessness" evolved? (3 pts)
+
+Answer:
+I think "leglessness" evolved once: The Tuatara has legs, so leglessness would evolve at the very least after that split. Leglessness evolved once, with the common ancestor that connected the Tuatara and the rest of the tree. That common ancestor that connected the Tuatara and the rest of the tree, splits the tree into two clades: one that includes only legless lizards (the galliwasp, glass, and california legless lizards), and one that includes all the snakes (snakes are legless), and the worm-lizard, 
+
+```{r}
+
+plot(stree)
+
+```
+
+***
