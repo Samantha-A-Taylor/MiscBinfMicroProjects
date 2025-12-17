@@ -1,0 +1,290 @@
+---
+title: "Bayesian Phylogenetic Analysis and Trait Evolution in Cucurbita Species"
+author: "Samantha A. Taylor"
+date: "01 November 2021"
+output:
+      pdf_document :
+        latex_engine : xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+***
+
+## Overview
+
+For this exercise, you will be looking at the evolutionary relationships among 8 different species of pumpkins, squashes, and gourds.  Your goals are to 1) set up and run a phylogenetic analysis with MrBayes with appropriate parameter settings, and 2) use your resulting tree to try and determine how many different times domestication occurred in this genus (Cucurbita).
+
+The samples in the dataset include: 
+
+* 3 wild species: Cu. foetidissima, Cu. ecuadorensis, Cu. martinez
+
+* 5 domesticated varieties: Cu. ficifolia, Cu. maxima, Cu. pepo ssp. pepo, Cu. argyrosperma ssp. sororia, Cu. moschata.
+
+* 1 outgroup: Citrullus lanatus
+
+## Download the Data Set
+
+You will have a copy of the NADH gene sequence taken from each of the taxa.  You can download the fasta file with these sequences. You can also download a text file with the table of information about each species.
+
+***
+
+# Part One: Align the Sequences and Determine the Best Nucleotide Substitution Model
+
+Read the fasta file into R and perform an alignment with the msa() function. For this data set, please use the Muscle alignment method instead of Clustal-Omega. Use modelTest() to determine the best nucleotide substitution model to use in your analysis.  Once you have your alignment, you can save it as a nexus file.
+
+```{r include=FALSE}
+
+library(msa)
+library('phangorn')
+library('phytools')
+library(adegenet)
+library(castor)
+
+```
+
+```{r}
+
+dnaSeqs = readDNAStringSet("pumpkin-nadh.fa",format="fasta")
+aligns = msa(dnaSeqs, method="Muscle")
+
+forPhang = msaConvert(aligns, type="phangorn::phyDat")
+mt = modelTest(forPhang)
+
+mt[which(mt$logLik==max(mt$logLik)),]
+mt[which(mt$BIC==min(mt$BIC)),]
+
+dna = as.DNAbin(forPhang)
+D = dist.dna(dna, model="F81", gamma=FALSE)
+
+write.nexus.data(as.DNAbin(forPhang), file="pumpkin-aln.nex")
+
+```
+
+### Question 1 (3 pts)
+Which nucleotide substitution model is the best fit for your data? What are the parameters of this model?
+
+Answer: Based on the results of the R modelTest() function, the model with the highest log likelihood score was the general time reversible model with gamma and inverse gamma (GTR+G+I). Also, based on the results of the R modelTest() function, the model with the lowest BIC score was the Felsenstein 1981 model (also known as F81 + Inverse gamma model or F81 + I), so I used the F81 model with gamma = FALSE (since gamma is not equal to inverse gamma) in my distance calculation. This model is a four-parameter model that incorporates different equilibrium frequency distributions for each nucleotide.
+
+***
+
+# Part Two: Run MrBayes
+
+Upload your nexus files to the cluster, and perform the Bayesian analysis with MrBayes. You may perform the run in interactive mode OR with a slurm script, but either way make sure to save a copy of your parameter settings in order to answer the next question in this assignment. If you run MrBayes in interactive mode, simply type "showmodel" after editing your settings, then you may either copy and past the results of this into a text file, or you may take a screenshot of your settings. If you run MrBayes with a slurm script, all you need is a saved copy of your input parameters file.
+
+Edit your model settings in MrBayes according the the best fit model you obtained in part one. If you need to adjust your priors as well in order to achieve the right model, then do so. Add a command to also set the outgroup species: 'Outgroup lanatus'.
+
+In interactive mode, just enter the above command as it is shown; in the slurm script, just add a line with this command some time before the "mcmc" command starts.
+
+Run MrBayes with a minimum of 20,000 iterations (for those of you using the job script, note that you do not need to go above 100,000 iterations, and would probably be fine with 30,000).
+
+### Question 2 (3 pts)
+Provide a copy of the final model settings/parameters you used in your MrBayes run.  You can either copy and paste the text from showmodel, copy the code block from your slurm script, or even provide a screenshot showing one of those things.
+
+```{bash eval=FALSE, include=TRUE}
+
+## Running MrBayes in interactive mode
+module load mrbayes
+mb
+
+  MrBayes > execute pumpkin-aln.nex
+  MrBayes > showmodel
+
+  MrBayes > lset nst=1 rates=propinv
+  MrBayes > Outgroup lanatus
+
+  MrBayes > showmodel
+
+  MrBayes > mcmc ngen=20000 samplefreq=100
+
+  MrBayes > sump relburnin=yes burninfrac=0.25
+  MrBayes > sumt relburnin=yes burninfrac=0.25 conformat=simple
+
+```
+
+Answer: I used the setting "Nst = 1" because we want to specify that we are only allowing 1 substitution rate. I set Nst equal to 1 because, since I used the F81 model, we are only allowing one possible substitution rate, because all possible mutations must happen at the same rate. Because I am using the model F81 + I, I need to tell MrBayes to set the rates to "propinv", which is the same as using just (+I) without the G. I used 'Outgroup lanatus' to run MrBayes specifying that the outgroup of the dataset is watermelon.
+
+### Question 3 (3 pts)
+Do you think that you ran your model long enough to achieve convergence and appropriate levels of mixing?  Why or why not?  Be sure to provide clear evidence, either in the form of screenshots, text that you have copied and pasted, or plots that you have made in R.
+
+```{bash eval=FALSE, include=TRUE}
+
+Average standard deviation of split frequencies: 0.002341
+
+Continue with analysis? (yes/no): no
+
+Analysis completed in 3 seconds
+   Analysis used 3.20 seconds of CPU time on processor 0
+   Likelihood of best state for "cold" chain of run 1 was -3678.83
+   Likelihood of best state for "cold" chain of run 2 was -3678.83
+
+   Acceptance rates for the moves in the "cold" chain of run 1:
+      With prob.   (last 100)   chain accepted proposals by move
+         11.3 %     ( 13 %)     Dirichlet(Pi)
+         28.9 %     ( 23 %)     Slider(Pi)
+         61.6 %     ( 66 %)     Slider(Pinvar)
+          0.6 %     (  0 %)     ExtSPR(Tau,V)
+          0.2 %     (  0 %)     ExtTBR(Tau,V)
+          0.7 %     (  1 %)     NNI(Tau,V)
+          0.8 %     (  0 %)     ParsSPR(Tau,V)
+         49.7 %     ( 36 %)     Multiplier(V)
+         34.0 %     ( 36 %)     Nodeslider(V)
+         20.9 %     ( 24 %)     TLMultiplier(V)
+
+   Acceptance rates for the moves in the "cold" chain of run 2:
+      With prob.   (last 100)   chain accepted proposals by move
+         14.1 %     ( 17 %)     Dirichlet(Pi)
+         25.4 %     ( 23 %)     Slider(Pi)
+         56.6 %     ( 54 %)     Slider(Pinvar)
+          0.4 %     (  1 %)     ExtSPR(Tau,V)
+          0.1 %     (  0 %)     ExtTBR(Tau,V)
+          0.3 %     (  0 %)     NNI(Tau,V)
+          0.7 %     (  1 %)     ParsSPR(Tau,V)
+         51.6 %     ( 47 %)     Multiplier(V)
+         33.0 %     ( 32 %)     Nodeslider(V)
+         20.4 %     ( 17 %)     TLMultiplier(V)
+
+   Chain swap information for run 1:
+
+              1     2     3     4
+        --------------------------
+      1 |        0.76  0.58  0.40
+      2 |  3314        0.78  0.55
+      3 |  3270  3365        0.75
+      4 |  3402  3368  3281
+
+   Chain swap information for run 2:
+
+              1     2     3     4
+        --------------------------
+      1 |        0.79  0.64  0.47
+      2 |  3354        0.81  0.64
+      3 |  3365  3271        0.82
+      4 |  3369  3333  3308
+
+   Upper diagonal: Proportion of successful state exchanges between chains
+   Lower diagonal: Number of attempted state exchanges between chains
+
+   Chain information:
+
+     ID -- Heat
+    -----------
+      1 -- 1.00  (cold chain)
+      2 -- 0.91
+      3 -- 0.83
+      4 -- 0.77
+
+   Heat = 1 / (1 + T * (ID - 1))
+      (where T = 0.10 is the temperature and ID is the chain number)
+
+```
+
+Answer: I believe I ran the model long enough to achieve convergence and appropriate levels of mixing due to the standard deviation of split frequencies that were reported. The lower the value is, the more the chains have converged, with 0.01 being the value that determines whether or not to continue iterating the MCMC calculations. My value was '0.002341' after 20000 iterations, which is much lower than 0.01. **Therefore, because 0.002341 < 0.01 (the cut-off value used), I conclude that I ran my model long enough to achieve convergence and appropriate levels of mixing.**
+
+***
+
+# Part Three: Plot the Results with Node Support Values
+
+When MrBayes has finished running, download and plot your final consensus tree with posterior probability values at each node.
+
+```{r}
+
+bayesTree = read.nexus("pumpkin-aln.nex.con.tre")
+
+bayesTree1 = bayesTree[[1]]
+
+bayesTree2 = root(bayesTree1, "lanatus", resolve.root=T)
+
+```
+
+### Question 4 (2 pts)
+Provide the plot of your tree with support values.
+
+```{r}
+
+plotTree(bayesTree2, edge.width=2, font=1)
+nodelabels(bayesTree2$node.label, cex=0.8, bg = "lightyellow")
+
+```
+
+# Part Four: Ancestral State Reconstruction of Domestication
+
+Using the Maximum Parsimony method, perform an ancestral state reconstruction of the domestication trait. Because it is essentially impossible to go back to a wild state after being domesticated, you should set up a custom transition cost matrix where we set the cost of going from wild to domesticated as 1, but the cost of going in the opposite direction as Infinity.   Here is my code for setting up a matrix like this (where trait 1 is domesticated, and trait 2 is wild): 'Q = matrix(data=c(0,1,Inf,0), nrow=2, dimnames=list(c(1,2), c(1,2)))'.
+
+```{r}
+
+options(stringsAsFactors=FALSE)
+plot(bayesTree1, main="Starting Ancestral State Tree")
+
+my.states = c('domesticated', 'domesticated', 'domesticated', 'wild', 'wild', 'wild', 'domesticated', 'domesticated', 'wild')
+names(my.states) = bayesTree1$tip.label
+
+numeric.states = as.numeric(as.factor(my.states))
+
+Q = matrix(data=c(0,1,Inf,0), nrow=2, dimnames=list(c(1,2), c(1,2)))
+
+mp_custom = asr_max_parsimony(tree=bayesTree1, tip_states=numeric.states, Nstates=2, transition_costs=Q)
+
+pie.matrix = matrix(mp_custom$ancestral_likelihoods, ncol=2)
+rownames(pie.matrix) = seq(10,16)
+colnames(pie.matrix) = c("wild", "domesticated")
+
+```
+
+### Question 5 (2 pts)
+Provide the plot of your tree with ancestral states.
+
+```{r}
+
+plotTree(bayesTree1, offset=0.5)
+tiplabels(pie = to.matrix(my.states, sort(unique(my.states))), piecol = c("orange", "darkgreen"), cex = 0.4)
+nodelabels(node = as.numeric(rownames(pie.matrix)), pie = pie.matrix, piecol = c("orange", "darkgreen"), cex=0.5)
+#add.simmap.legend(prompt=T, leg=c("wild", "domesticated"), colors=c("darkgreen", "orange"))
+
+```
+
+### Question 6 (2pts)
+How many separate domestication events do you think occurred based on your tree? Be sure to describe which lineages or nodes each domestication event happened on.
+
+Answer: I believe 3 total domestication events occurred based on the tree: 1 when maxima evolved into domesticated from its common ancestor with ecuadorensis, 1 when pepo (+ argyrosperma + moschata) evolved into domesticated from its common ancestor with martinez, and one during the polytomy of ficifolia, lanatus, and everyone else, because lanatus stayed wild, as did the common ancestor of foetidissima and the ecuadorensis clade (+) martinez clade) (all start as wild).
+
+***
+
+## Bonus Round: Continuous State Evolution of Size
+
+One of the traits that often undergoes strong selection during domestication is size, with domesticated varieties typically being selected to be much larger than their wild ancestors.  To look at size evolution in pumpkins, and see how it correlates with domestication, perform a continuous model of ancestral state reconstruction.
+
+First, define your set of continuous scores based on average size:
+
+```{r}
+
+info = read.table("pumpkin-info.txt", header=TRUE, sep="\t")
+cont.scores = info$AvgWeight_lbs
+names(cont.scores) = info$Species
+m = match(bayesTree1$tip.label, names(cont.scores))
+
+```
+
+Then use the contMap() function to simultaneously perform the reconstruction and plot the results. As a bonus, we'll customize the colors to be more fall-appropriate!
+
+```{r}
+
+obj = contMap(bayesTree1, cont.scores, plot = FALSE)
+obj = setMap(obj, colors=c("darkgreen","orange", "red"))
+
+```
+
+### Bonus Question (+1 point)
+Show the plot of your continuous trait evolution tree. Does it look to you like size correlates with evolution, or not really? Be sure to explain your answer.
+
+```{r}
+
+plot(obj, fsize=c(0.8,0.8), leg.txt="Size of Pumpkins")
+
+```
+
+Answer: It kind of looks like size correlates with evolution, but only for the wild type. This is because the 4 wild species are green (meaning low length/size), whereas the domesticated species range from large size/length (maxima) to a middle range (pepo + argyrosperma) to small range (ficifolia + moschata). If we domesticate pumpkins, we can select for sizing, however, in the wild, species come with the size they are.
+
+***
