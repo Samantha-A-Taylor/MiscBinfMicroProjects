@@ -1,0 +1,18 @@
+SPECIES,CLASSIFICATION,SOCIALITY TYPE
+Frankliniella occidentalis,Thrip,Outgroup
+Cephus cinctus,Sawfly,Solitary
+Athalia rosae,Sawfly,Solitary
+Trachymyrmex zeteki,Ant,Highly Eusocial
+Camponotus floridanus,Ant ,Highly Eusocial
+Monomorium pharaonis,Ant,Highly Eusocial
+Apis mellifera,Bee,Highly Eusocial
+Apis laboriosa,Bee,Highly Eusocial
+Bombus terrestris,Bee,Primitively eusocial
+Bombus impatiens,Bee,Primitively eusocial
+Megachile rotundata,Bee,Solitary
+Eufriesea mexicana,Bee,Solitary
+Vespula pensylvanica,Wasp,Highly Eusocial
+Venturia canescens,Wasp,Highly Eusocial
+Polistes fuscatus,Wasp,Primitively Eusocial
+Polistes canadensis,Wasp,Primitively Eusocial
+Nasonia vitripennis,Wasp,Solitary
